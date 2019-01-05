@@ -268,3 +268,8 @@ func (f *Frame) GetRawFrame() *C.struct_AVFrame {
 func (f *Frame) Time(timebase AVRational) int {
 	return int(float64(timebase.AVR().Num) / float64(timebase.AVR().Den) * float64(f.Pts()))
 }
+
+func (f *Frame) RGBAData() []byte {
+	nBytes := f.Width() * f.Height() * 4
+	return C.GoBytes(unsafe.Pointer(f.avFrame.data[0]), C.int(nBytes))
+}
