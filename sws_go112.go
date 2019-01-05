@@ -6,13 +6,38 @@ package gmf
 
 #cgo pkg-config: libswscale
 
+#include "libavutil/frame.h"
 #include "libswscale/swscale.h"
 
+void gmf_rotate_rgba_180(uint8_t** rgba, int width, int height) {
+	uint32_t* src = (uint32_t*)rgba[0];
+	const int stride = width;
+	int idx1;
+	int idx2;
+	for (int i = 0, j = height - 1; i < j; i++, j--) {
+		for (int x = 0, y = width - 1; x < width; x++, y--) {
+			idx1 = (i * stride) + x;
+			idx2 = (j * stride) + y;
+			uint32_t tmp = src[idx1];
+			src[idx1] = src[idx2];
+			src[idx2] = tmp;
+		}
+	}
+}
+void gmf_scale_rgba(struct SwsContext* ctx, uint8_t* rgba, int width, int height, struct AVFrame* frame) {
+	if (!frame) {
+		fprintf(stderr, "[gmf_scale_rgba] frame is NULL\n");
+	}
+	const uint8_t *const inData[1] = { rgba };
+	const int inStride[1] = { 4 * width };
+	sws_scale(ctx, inData, inStride, 0, height, frame->data, frame->linesize);
+}
 */
 import "C"
 
 import (
 	"fmt"
+	"image"
 	"unsafe"
 )
 
@@ -60,7 +85,17 @@ func NewSwsCtx(srcW, srcH int, srcPixFmt int32, dstW, dstH int, dstPixFmt int32,
 	}, nil
 }
 
-func (ctx *SwsCtx) Scale(src *Frame, dst *Frame) {
+func NewPicSwsCtx(srcWidth int, srcHeight int, srcPixFmt int32, dst *CodecCtx, method int) *SwsCtx {
+	ctx := C.sws_getContext(C.int(srcWidth), C.int(srcHeight), srcPixFmt, C.int(dst.Width()), C.int(dst.Height()), dst.PixFmt(), C.int(method), nil, nil, nil)
+
+	if ctx == nil {
+		return nil
+	}
+
+	return &SwsCtx{swsCtx: ctx}
+}
+
+func (ctx *SwsCtx) Scale(src *Frame, dst *Frame, rotateRgba180 bool) {
 	C.sws_scale(
 		ctx.swsCtx,
 		(**C.uint8_t)(unsafe.Pointer(&src.avFrame.data)),
@@ -69,6 +104,24 @@ func (ctx *SwsCtx) Scale(src *Frame, dst *Frame) {
 		C.int(src.Height()),
 		(**C.uint8_t)(unsafe.Pointer(&dst.avFrame.data)),
 		(*C.int)(unsafe.Pointer(&dst.avFrame.linesize)))
+	if rotateRgba180 {
+		C.gmf_rotate_rgba_180(
+			(**C.uint8_t)(unsafe.Pointer(&dst.avFrame.data)),
+			C.int(dst.Width()),
+			C.int(dst.Height()))
+	}
+}
+
+func (this *SwsCtx) ScaleRGBA(src *image.NRGBA, dst *Frame) {
+	bounds := src.Bounds()
+	width := bounds.Max.X
+	height := bounds.Max.Y
+	C.gmf_scale_rgba(
+		this.swsCtx,
+		(*C.uint8_t)(unsafe.Pointer(&src.Pix[0])),
+		C.int(width),
+		C.int(height),
+		dst.avFrame)
 }
 
 func (ctx *SwsCtx) Free() {
