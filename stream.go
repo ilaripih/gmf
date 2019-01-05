@@ -4,14 +4,23 @@ package gmf
 
 #cgo pkg-config: libavformat libavcodec
 
+#include "libavutil/dict.h"
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
 
+char* gmf_get_metadata_item(const AVDictionary* dict, const char* key) {
+	AVDictionaryEntry* item = av_dict_get(dict, key, NULL, AV_DICT_MATCH_CASE);
+	if (item == NULL) {
+		return NULL;
+	}
+	return item->value;
+}
 */
 import "C"
 
 import (
 	"fmt"
+	"unsafe"
 )
 
 type Stream struct {
@@ -172,4 +181,13 @@ func (s *Stream) CopyCodecPar(cp *CodecParameters) error {
 	}
 
 	return nil
+}
+
+func (s *Stream) Metadata(key string) string {
+	cKey := C.CString(key)
+	defer C.free(unsafe.Pointer(cKey))
+	ret := C.gmf_get_metadata_item(
+		(*C.struct_AVDictionary)(unsafe.Pointer(s.avStream.metadata)),
+		cKey)
+	return C.GoString(ret)
 }
