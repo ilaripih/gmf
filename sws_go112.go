@@ -143,7 +143,7 @@ func DefaultRescaler(ctx *SwsCtx, frames []*Frame) ([]*Frame, error) {
 			return nil, fmt.Errorf("error allocation tmp frame - %s", err)
 		}
 
-		ctx.Scale(frames[i], tmp)
+		ctx.Scale(frames[i], tmp, false)
 
 		tmp.SetPts(frames[i].Pts())
 		tmp.SetPktDts(frames[i].PktDts())
