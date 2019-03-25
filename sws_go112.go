@@ -130,7 +130,7 @@ func (ctx *SwsCtx) Free() {
 	}
 }
 
-func DefaultRescaler(ctx *SwsCtx, frames []*Frame) ([]*Frame, error) {
+func DefaultRescaler(ctx *SwsCtx, frames []*Frame, rotateRgba180 bool) ([]*Frame, error) {
 	var (
 		result []*Frame = make([]*Frame, 0)
 		tmp    *Frame
@@ -143,7 +143,7 @@ func DefaultRescaler(ctx *SwsCtx, frames []*Frame) ([]*Frame, error) {
 			return nil, fmt.Errorf("error allocation tmp frame - %s", err)
 		}
 
-		ctx.Scale(frames[i], tmp, false)
+		ctx.Scale(frames[i], tmp, rotateRgba180)
 
 		tmp.SetPts(frames[i].Pts())
 		tmp.SetPktDts(frames[i].PktDts())
