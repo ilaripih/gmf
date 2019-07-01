@@ -112,7 +112,7 @@ func (ctx *SwsCtx) Scale(src *Frame, dst *Frame, rotateRgba180 bool) {
 	}
 }
 
-func (this *SwsCtx) ScaleRGBA(src *image.NRGBA, dst *Frame) {
+func (this *SwsCtx) ScaleRGBA(src *image.RGBA, dst *Frame) {
 	bounds := src.Bounds()
 	width := bounds.Max.X
 	height := bounds.Max.Y
